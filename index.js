@@ -136,7 +136,6 @@ module.exports = function (source) {
         }
         else if (type === "helper") {
             if (foundHelpers["$" + name]) {
-                console.log(foundHelpers["$" + name]);
                 return "__default(require(" + JSON.stringify(foundHelpers["$" + name]) + "))";
             }
             foundHelpers["$" + name] = null;
