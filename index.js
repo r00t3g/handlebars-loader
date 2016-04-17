@@ -14,6 +14,8 @@ function versionCheck(hbCompiler, hbRuntime) {
 }
 
 module.exports = function (source) {
+
+
     if (this.cacheable) this.cacheable();
 
     var loaderApi = this,
@@ -202,7 +204,7 @@ module.exports = function (source) {
         try {
             if (source) {
                 template = hb.precompile(source, {
-                    knownHelpersOnly: firstCompile ? false : true,
+                    knownHelpersOnly: (query.helperDirs && query.helperDirs.length) ? true : false,
                     knownHelpers: knownHelpers
                 });
             }
