@@ -206,7 +206,7 @@ module.exports = function (source) {
                 template = hb.precompile(source, {
                     knownHelpersOnly: (query.helperDirs && query.helperDirs.length) ? true : false,
                     knownHelpers: knownHelpers
-                });
+                }).replace(/\\[rn]/g,"").replace(/\s{2,}/g, " ").replace(/>\s+</g, "><");
             }
         } catch (err) {
             return loaderAsyncCallback(err);
