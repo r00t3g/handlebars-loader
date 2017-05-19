@@ -211,13 +211,12 @@ module.exports = function (source) {
                     .replace(/\\[rn]/g, "")
                     .replace(/\s{2,}/g, " ")
                     .replace(/>\s+</g, "><");
-
                 if (query.includeFileName) {
                     template = template.replace(
-                        'hash":{}',
+                        'hash":{',
                         'hash":{"f":"'
                         + resourcePath.replace(rootStripRx, "").replace(/\/tpl\//g, "/").replace(/^\//g, "")
-                        + '"}'
+                        + '",'
                     );
                 }
             }
