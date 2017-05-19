@@ -15,10 +15,10 @@ function versionCheck(hbCompiler, hbRuntime) {
 
 module.exports = function (source) {
 
-
     if (this.cacheable) this.cacheable();
 
     var loaderApi = this,
+        rootStripRx = new RegExp("(" + this._compiler.options.resolve.root + "/" + this._compiler.options.resolve.modulesDirectories.join(")|(" + this._compiler.options.resolve.root + "/") + ")", "g"),
         resourcePath = this.resourcePath,
         query = this.query instanceof Object ? this.query : loaderUtils.parseQuery(this.query),
         runtimePath = query.runtime || require.resolve("handlebars/runtime"),
@@ -225,7 +225,7 @@ module.exports = function (source) {
 
                 var traceMsg;
                 if (debug) {
-                    traceMsg = path.normalize(context + "\\" + request);
+                    traceMsg = path.normalize(path.join(context, request));
                     console.log("Attempting to resolve %s %s", type, traceMsg);
                     console.log("request=%s", request);
                 }
@@ -326,11 +326,12 @@ module.exports = function (source) {
             }
 
             // export as module if template is not blank
+            var cleanedResourcePath = resourcePath.replace(rootStripRx, "").replace(/\/tpl\//g, "/").replace(/^\//g, "");
             var slug = template ?
-            'var Handlebars = require(' + JSON.stringify(runtimePath) + ');\n'
-            + 'function __default(obj) { return obj && (obj.__esModule ? obj["default"] : obj); }\n'
-            + 'module.exports = (function($__hbsFileName){ return (Handlebars["default"] || Handlebars).template(' + template + '); })("'+resourcePath+'")' :
-                'module.exports = function(){return "";};';
+                       'var Handlebars = require(' + JSON.stringify(runtimePath) + ');\n'
+                       + 'function __default(obj) { return obj && (obj.__esModule ? obj["default"] : obj); }\n'
+                       + 'module.exports = (function($__hbsFileName){ return (Handlebars["default"] || Handlebars).template(' + template + '); })("'+cleanedResourcePath+'")' :
+                       'module.exports = function(){return "";};';
 
             if (query.cache) {
                 fs.writeFileSync(cachePath, slug);
