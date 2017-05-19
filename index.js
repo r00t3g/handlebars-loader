@@ -203,10 +203,23 @@ module.exports = function (source) {
 
         try {
             if (source) {
-                template = hb.precompile(source, {
-                    knownHelpersOnly: (query.helperDirs && query.helperDirs.length) ? true : false,
-                    knownHelpers: knownHelpers
-                }).replace(/\\[rn]/g,"").replace(/\s{2,}/g, " ").replace(/>\s+</g, "><");
+                template = hb
+                    .precompile(source, {
+                        knownHelpersOnly: (query.helperDirs && query.helperDirs.length) ? true : false,
+                        knownHelpers: knownHelpers
+                    })
+                    .replace(/\\[rn]/g, "")
+                    .replace(/\s{2,}/g, " ")
+                    .replace(/>\s+</g, "><");
+
+                if (query.includeFileName) {
+                    template = template.replace(
+                        'hash":{}',
+                        'hash":{"f":"'
+                        + resourcePath.replace(rootStripRx, "").replace(/\/tpl\//g, "/").replace(/^\//g, "")
+                        + '"}'
+                    );
+                }
             }
         } catch (err) {
             return loaderAsyncCallback(err);
@@ -326,11 +339,10 @@ module.exports = function (source) {
             }
 
             // export as module if template is not blank
-            var cleanedResourcePath = resourcePath.replace(rootStripRx, "").replace(/\/tpl\//g, "/").replace(/^\//g, "");
             var slug = template ?
                        'var Handlebars = require(' + JSON.stringify(runtimePath) + ');\n'
                        + 'function __default(obj) { return obj && (obj.__esModule ? obj["default"] : obj); }\n'
-                       + 'module.exports = (function($__hbsFileName){ return (Handlebars["default"] || Handlebars).template(' + template + '); })("'+cleanedResourcePath+'")' :
+                       + 'module.exports = (Handlebars["default"] || Handlebars).template(' + template + ');' :
                        'module.exports = function(){return "";};';
 
             if (query.cache) {
