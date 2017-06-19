@@ -1,3 +1,4 @@
+/* eslint-env mocha */
 var assert = require('assert'),
     async = require('async'),
     fs = require('fs'),
@@ -39,6 +40,7 @@ function testTemplate(loader, template, options, testFn) {
 
   loader.call(new WebpackLoaderMock({
     query: options.query,
+    options: options.options || {},
     resolveStubs: resolveStubs,
     async: function (err, source) {
       if (err) {
@@ -119,6 +121,102 @@ describe('handlebars-loader', function () {
       done();
     });
   });
+
+  var partialResolverOverride = function partialResolverOverride(request, cb){
+    switch(request) {
+    case 'partial':
+      cb(null, 'test');
+      break;
+    case '$partial':
+      cb(null, './test');
+      break;
+    }
+  };
+
+  var testPartialResolver = function testPartialResolver(expectation, options, config){
+    it(expectation, function (done) {
+      testTemplate(loader, './with-partials.handlebars', {
+        stubs: {
+          './test': require('./partial.handlebars'),
+          'test': require('./partial.handlebars')
+        },
+        query: {
+          config: config
+        },
+        options: options,
+        data: TEST_TEMPLATE_DATA
+      }, function (err, output, require) {
+        assert.ok(output, 'generated output');
+        assert.ok(require.calledWith('test'),
+          'should have loaded partial with module syntax');
+        assert.ok(require.calledWith('./test'),
+          'should have loaded partial with relative syntax');
+        done();
+      });
+    });
+  };
+
+  testPartialResolver(
+    'should use the partialResolver if specified', {
+      handlebarsLoader: {
+        partialResolver: partialResolverOverride
+      }
+    }
+  );
+
+  testPartialResolver(
+    'honors the config query option when finding the partialResolver', {
+      handlebarsLoaderOverride: {
+        partialResolver: partialResolverOverride
+      }
+    },
+    'handlebarsLoaderOverride'
+  );
+
+  var helperResolverOverride = function helperResolverOverride(request, cb){
+    switch(request) {
+    case './image':
+      cb(null, './helpers/image.js');
+      break;
+    case './json':
+      cb(null, './helpers2/json.js');
+      break;
+    default:
+      cb();
+    }
+  };
+
+  var testHelperResolver = function testHelperResolver(expectation, options, config){
+    it(expectation, function (done) {
+      testTemplate(loader, './with-dir-helpers-multiple.handlebars', {
+        query: {
+          config: config
+        },
+        options: options,
+        data: TEST_TEMPLATE_DATA
+      }, function (err, output, require) {
+        assert.ok(output, 'generated output');
+        done();
+      });
+    });
+  };
+
+  testHelperResolver(
+    'should use the helperResolver if specified', {
+      handlebarsLoader: {
+        helperResolver: helperResolverOverride
+      }
+    }
+  );
+
+  testHelperResolver(
+    'honors the config query option when finding the helperResolver', {
+      handlebarsLoaderOverride: {
+        helperResolver: helperResolverOverride
+      }
+    },
+    'handlebarsLoaderOverride'
+  );
 
   it('allows specifying additional helper search directory', function (done) {
     testTemplate(loader, './with-dir-helpers.handlebars', {
@@ -344,11 +442,11 @@ describe('handlebars-loader', function () {
       data: TEST_TEMPLATE_DATA
     }, function (err, output, require) {
       assert.ok(output, 'generated output');
-      assert.ok(require.calledWith('image'),
-        'should have loaded helper');
+      assert.ok(!require.calledWith('image'),
+        'should not have loaded helper with module syntax');
 
-      assert.ok(require.calledWith('nested/quotify'),
-        'should have loaded nested helper');
+      assert.ok(!require.calledWith('nested/quotify'),
+        'should not have loaded nested helper with module syntax');
 
       assert.ok(require.calledWith('relative-partial'),
         'should have loaded partial with module syntax');
@@ -385,7 +483,7 @@ describe('handlebars-loader', function () {
       done();
     });
   });
-  
+
   it('should be able to use babel6/es6 helpers', function (done) {
     testTemplate(loader, './with-helpers-babel.handlebars', {
       query: '?' + JSON.stringify({
@@ -396,6 +494,50 @@ describe('handlebars-loader', function () {
       data: TEST_TEMPLATE_DATA
     }, function (err, output, require) {
       assert.ok(output, 'Description Description');
+      done();
+    });
+  });
+
+  it('should allow partials to be declared in directories', function (done) {
+    testTemplate(loader, './with-dir-partials.handlebars', {
+      stubs: {
+        './partial': require('./partial.handlebars'),
+        './otherPartial': require('./partialDirs/otherPartial.handlebars')
+      },
+      data: TEST_TEMPLATE_DATA,
+      query: '?' + JSON.stringify({
+        partialDirs: [
+          path.join(__dirname, 'partialDirs')
+        ]
+      })
+    }, function (err, output, require) {
+      assert.ok(output, 'generated output');
+      assert.ok(require.calledWith('./partial'),
+        'should have loaded partial with relative syntax');
+      assert.ok(require.calledWith('./otherPartial'),
+        'should have loaded otherPartial with relative partialDirs syntax');
+      done();
+    });
+  });
+
+  it('allows helpers to be ignored until runtime', function (done) {
+    var runtimePath = require.resolve('handlebars/runtime');
+    var stubs = {};
+
+    // Need to set up a stubbed handlebars runtime that has our known helper loaded in
+    var Handlebars = require('handlebars/runtime').default.create();
+    stubs[runtimePath] = Handlebars;
+    Handlebars.registerHelper('someKnownHelper', function () {
+      return 'some known helper';
+    });
+
+    testTemplate(loader, './with-known-helpers.handlebars', {
+      query: '?ignoreHelpers',
+      stubs: stubs
+    }, function (err, output, require) {
+      assert.ok(output, 'generated output');
+      assert.ok(output.indexOf('some known helper') >= 0);
+      assert.ok(!require.calledWith('./someKnownHelper'), 'should not have tried to dynamically require helper');
       done();
     });
   });

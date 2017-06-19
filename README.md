@@ -1,3 +1,5 @@
+[![latest version](https://img.shields.io/npm/v/handlebars-loader.svg?maxAge=2592000)](https://www.npmjs.com/package/handlebars-loader)
+[![downloads](https://img.shields.io/npm/dm/handlebars-loader.svg?maxAge=2592000)](https://www.npmjs.com/package/handlebars-loader)
 [![Build Status](https://travis-ci.org/pcardune/handlebars-loader.svg?branch=master)](https://travis-ci.org/pcardune/handlebars-loader)
 [![Coverage Status](https://coveralls.io/repos/github/pcardune/handlebars-loader/badge.svg?branch=master)](https://coveralls.io/github/pcardune/handlebars-loader?branch=master)
 
@@ -7,6 +9,10 @@ A [handlebars](http://handlebarsjs.com) template loader for [webpack](https://gi
 
 *Handlebars 4 now supported*
 
+## Installation
+
+`npm i handlebars-loader --save`
+
 ## General Usage
 
 ### webpack configuration
@@ -15,7 +21,7 @@ A [handlebars](http://handlebarsjs.com) template loader for [webpack](https://gi
 {
   ...
   module: {
-    loaders: [
+    rules: [
       ...
       { test: /\.handlebars$/, loader: "handlebars-loader" }
     ]
@@ -44,7 +50,8 @@ A file "/folder/file.handlebars".
 {{../helper}} {{$module/helper}} are resolved similarly to partials.
 ```
 
-The following query options are supported:
+The following query (or config) options are supported:
+
  - *helperDirs*: Defines additional directories to be searched for helpers. Allows helpers to be defined in a directory and used globally without relative paths. You must surround helpers in subdirectories with brackets (Handlerbar helper identifiers can't have forward slashes without this). See [example](https://github.com/altano/handlebars-loader/tree/master/examples/helperDirs)
  - *runtime*: Specify the path to the handlebars runtime library. Defaults to look under the local handlebars npm module, i.e. `handlebars/runtime`.
  - *extensions*: Searches for templates with alternate extensions. Defaults are .handlebars, .hbs, and '' (no extension).
@@ -53,7 +60,32 @@ The following query options are supported:
  - *knownHelpers*: Array of helpers that are registered at runtime and should not explicitly be required by webpack. This helps with interoperability for libraries like Thorax [helpers](http://thoraxjs.org/api.html#template-helpers).
  - *exclude*: Defines a regex that will exclude paths from resolving. This can be used to prevent helpers from being resolved to modules in the `node_modules` directory.
  - *debug*: Shows trace information to help debug issues (e.g. resolution of helpers).
-
+ - *partialDirs*: Defines additional directories to be searched for partials. Allows partials to be defined in a directory and used globally without relative paths. See [example](https://github.com/altano/handlebars-loader/tree/master/examples/partialDirs)
+ - *preventIndent*: Prevent partials from being indented inside their parent template.
+ - *ignorePartials*: Prevents partial references from being fetched and bundled. Useful for manually loading partials at runtime.
+ - *ignoreHelpers*: Prevents helper references from being fetched and bundled. Useful for manually loading helpers at runtime.
+ - *compat*: Enables recursive field lookup for Mustache compatibility. See the Handlebars.js [documentation](https://github.com/wycats/handlebars.js#differences-between-handlebarsjs-and-mustache) for more information.
+ - *config*: Tells the loader where to look in the webpack config for configurations for this loader. Defaults to `handlebarsLoader`.
+ - *config.partialResolver* You can specify a function to use for resolving partials. To do so, add to your webpack config:
+    ```js
+    handlebarsLoader: {
+        partialResolver: function(partial, callback){
+            // should pass the partial's path on disk
+            // to the callback. Callback accepts (err, locationOnDisk)
+        }
+    }
+    ```
+- *config.helperResolver* You can specify a function to use for resolving helpers. To do so, add to your webpack config:
+    ```js
+    handlebarsLoader: {
+        helperResolver: function(helper, callback){
+            // should pass the helper's path on disk
+            // to the callback if one was found for the given parameter.
+            // Callback accepts (err, locationOnDisk)
+            // Otherwise just call the callback without any arguments
+        }
+    }
+    ```
 See [`webpack`](https://github.com/webpack/webpack) documentation for more information regarding loaders.
 
 ## Full examples

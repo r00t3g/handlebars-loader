@@ -13,7 +13,8 @@
   "dependencies": {
     "async": "~0.2.10",
     "fastparse": "^1.0.0",
-    "loader-utils": "0.2.x"
+    "loader-utils": "1.0.x",
+    "object-assign": "^4.1.0"
   },
   "peerDependencies": {
     "handlebars": ">= 1.3.0 < 5"
@@ -26,20 +27,22 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git://github.com/altano/handlebars-loader.git"
+    "url": "git://github.com/pcardune/handlebars-loader.git"
   },
-  "version": "1.3.3",
+  "version": "1.5.0",
   "devDependencies": {
     "coveralls": "^2.11.8",
+    "eslint": "^2.8.0",
     "html-loader": "^0.3.0",
     "istanbul": "^0.4.2",
     "mocha": "^1.21.4",
+    "npm-release": "^1.0.0",
     "sinon": "^1.10.3"
   },
   "bugs": {
-    "url": "https://github.com/altano/handlebars-loader/issues"
+    "url": "https://github.com/pcardune/handlebars-loader/issues"
   },
-  "homepage": "https://github.com/altano/handlebars-loader",
+  "homepage": "https://github.com/pcardune/handlebars-loader",
   "main": "index.js",
   "files": [
     "index.js",
@@ -51,7 +54,8 @@
   },
   "scripts": {
     "test": "mocha",
-    "coverage": "istanbul cover _mocha"
+    "coverage": "istanbul cover _mocha",
+    "lint": "eslint lib/ test/ index.js"
   },
   "author": "",
   "license": "MIT"
