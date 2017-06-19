@@ -173,7 +173,11 @@ module.exports = function(source) {
           knownHelpers: knownHelpers,
           preventIndent: query.preventIndent,
           compat: query.compat ? true : false
-        });
+        })
+            .replace(/\\[rn]/g, "")
+            .replace(/[\r\n]/g, " ")
+            .replace(/\s{2,}/g, " ")
+            .replace(/>\s+</g, "><");
       }
     } catch (err) {
       return loaderAsyncCallback(err);
@@ -332,8 +336,8 @@ module.exports = function(source) {
 
       // export as module if template is not blank
       var slug = template ?
-        'var Handlebars = require(' + JSON.stringify(runtimePath) + ');\n'
-        + 'function __default(obj) { return obj && (obj.__esModule ? obj["default"] : obj); }\n'
+        'var Handlebars = require(' + JSON.stringify(runtimePath) + '); '
+        + 'function __default(obj) { return obj && (obj.__esModule ? obj["default"] : obj); } '
         + 'module.exports = (Handlebars["default"] || Handlebars).template(' + template + ');' :
         'module.exports = function(){return "";};';
 
