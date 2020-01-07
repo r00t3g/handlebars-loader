@@ -21,7 +21,7 @@ function versionCheck(hbCompiler, hbRuntime) {
 function getLoaderConfig(loaderContext) {
   var query = loaderUtils.getOptions(loaderContext) || {};
   var configKey = query.config || 'handlebarsLoader';
-  var config = loaderContext.options[configKey] || {};
+  var config = (loaderContext.rootContext ? loaderContext.rootContext[configKey] : loaderContext.options[configKey]) || {};
   delete query.config;
   return assign({}, config, query);
 }
@@ -35,6 +35,8 @@ module.exports = function(source) {
   if (!versionCheck(handlebars, require(runtimePath))) {
     throw new Error('Handlebars compiler version does not match runtime version');
   }
+
+  var precompileOptions = query.precompileOptions || {};
 
   // Possible extensions for partials
   var extensions = query.extensions;
@@ -55,12 +57,11 @@ module.exports = function(source) {
   var foundUnclearStuff = {};
   var knownHelpers = {};
 
-  var queryKnownHelpers = query.knownHelpers;
-  if (queryKnownHelpers) {
-    [].concat(queryKnownHelpers).forEach(function(k) {
+  [].concat(query.knownHelpers, precompileOptions.knownHelpers).forEach(function(k) {
+    if (k && typeof k === 'string') {
       knownHelpers[k] = true;
-    });
-  }
+    }
+  });
 
   var inlineRequires = query.inlineRequires;
   if (inlineRequires) {
@@ -91,14 +92,14 @@ module.exports = function(source) {
         return JavaScriptCompiler.prototype.nameLookup.apply(this, arguments);
       }
       if (foundPartials["$" + name]) {
-        return "require(" + JSON.stringify(foundPartials["$" + name]) + ")";
+        return "require(" + loaderUtils.stringifyRequest(loaderApi, foundPartials["$" + name]) + ")";
       }
       foundPartials["$" + name] = null;
       return JavaScriptCompiler.prototype.nameLookup.apply(this, arguments);
     }
     else if (type === "helper") {
       if (foundHelpers["$" + name]) {
-        return "__default(require(" + JSON.stringify(foundHelpers["$" + name]) + "))";
+        return "__default(require(" + loaderUtils.stringifyRequest(loaderApi, foundHelpers["$" + name]) + "))";
       }
       foundHelpers["$" + name] = null;
       return JavaScriptCompiler.prototype.nameLookup.apply(this, arguments);
@@ -116,7 +117,7 @@ module.exports = function(source) {
   if (inlineRequires) {
     MyJavaScriptCompiler.prototype.pushString = function(value) {
       if (inlineRequires.test(value)) {
-        this.pushLiteral("require(" + JSON.stringify(value) + ")");
+        this.pushLiteral("require(" + loaderUtils.stringifyRequest(loaderApi, value) + ")");
       } else {
         JavaScriptCompiler.prototype.pushString.call(this, value);
       }
@@ -126,7 +127,7 @@ module.exports = function(source) {
       if (str.indexOf && str.indexOf('"') === 0) {
         var replacements = findNestedRequires(str, inlineRequires);
         str = fastreplace(str, replacements, function (match) {
-          return "\" + require(" + JSON.stringify(match) + ") + \"";
+          return "\" + require(" + loaderUtils.stringifyRequest(loaderApi, match) + ") + \"";
         });
       }
       return JavaScriptCompiler.prototype.appendToBuffer.apply(this, arguments);
@@ -134,6 +135,26 @@ module.exports = function(source) {
   }
 
   hb.JavaScriptCompiler = MyJavaScriptCompiler;
+
+  // Define custom visitor for further template AST parsing
+  var Visitor = handlebars.Visitor;
+  function InternalBlocksVisitor() {
+    this.partialBlocks = [];
+    this.inlineBlocks = [];
+  }
+
+  InternalBlocksVisitor.prototype = new Visitor();
+  InternalBlocksVisitor.prototype.PartialBlockStatement = function(partial) {
+    this.partialBlocks.push(partial.name.original);
+    Visitor.prototype.PartialBlockStatement.call(this, partial);
+  };
+  InternalBlocksVisitor.prototype.DecoratorBlock = function(partial) {
+    if (partial.path.original === 'inline') {
+      this.inlineBlocks.push(partial.params[0].value);
+    }
+
+    Visitor.prototype.DecoratorBlock.call(this, partial);
+  };
 
   // This is an async loader
   var loaderAsyncCallback = this.async();
@@ -166,14 +187,23 @@ module.exports = function(source) {
     // Precompile template
     var template = '';
 
+    // AST holder for current template
+    var ast = null;
+
+    // Compile options
+    var opts = assign({
+      knownHelpersOnly: !firstCompile,
+      // TODO: Remove these in next major release
+      preventIndent: !!query.preventIndent,
+      compat: !!query.compat
+    }, precompileOptions, {
+      knownHelpers: knownHelpers,
+    });
+
     try {
       if (source) {
-        template = hb.precompile(source, {
-          knownHelpersOnly: firstCompile ? false : true,
-          knownHelpers: knownHelpers,
-          preventIndent: query.preventIndent,
-          compat: query.compat ? true : false
-        })
+        ast = hb.parse(source, opts);
+        template = hb.precompile(ast, opts)
             .replace(/\\[rn]/g, "")
             .replace(/[\r\n]/g, " ")
             .replace(/\s{2,}/g, " ")
@@ -287,7 +317,19 @@ module.exports = function(source) {
       } else {
         partialResolver(request, function(err, resolved){
           if(err) {
-            return partialCallback(err);
+            var visitor = new InternalBlocksVisitor();
+
+            visitor.accept(ast);
+
+            if (
+              visitor.inlineBlocks.indexOf(request) !== -1 ||
+              visitor.partialBlocks.indexOf(request) !== -1
+            ) {
+              return partialCallback();
+            } else {
+              return partialCallback(err);
+            }
+
           }
           foundPartials[partial] = resolved;
           needRecompile = true;
@@ -336,7 +378,7 @@ module.exports = function(source) {
 
       // export as module if template is not blank
       var slug = template ?
-        'var Handlebars = require(' + JSON.stringify(runtimePath) + '); '
+        'var Handlebars = require(' + loaderUtils.stringifyRequest(loaderApi, runtimePath) + '); '
         + 'function __default(obj) { return obj && (obj.__esModule ? obj["default"] : obj); } '
         + 'module.exports = (Handlebars["default"] || Handlebars).template(' + template + ');' :
         'module.exports = function(){return "";};';

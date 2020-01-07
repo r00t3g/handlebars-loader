@@ -1,9 +1,21 @@
 # Change Log
 
-## [Unreleased]
+## [1.7.1] - 2018-12-18
+
+### Fixed
+- Fixed use stringifyRequest instead of absolute paths in loader output (#167)
+
+## [1.7.0] - 2018-03-20
+
+### Fixed
+- Use `loaderContext.rootContext` instead of `loaderContext.options` when used with Webpack 4
+- Fixed resolving of inline partials and partial blocks with failover content (#106, #135)
+
+## [1.6.0] - 2017-09-01 ##
 
 ### Added
 - Added `ignoreHelpers` option to skip automatic lookup/bundling of helpers
+- Added `precompileOptions` to pass options to handlebars precompile
 
 ## [1.5.0] - 2017-04-20
 
@@ -19,7 +31,6 @@
 - Fixed resolving relative helpers on first pass when helper directories are given
 - Added `ignorePartials` option to skip automatic lookup/bundling of partials
 - Added `compat` option to enable Mustache lookup compatibility.
-- Your feature here!
 - Added `config` option to query so that configs can be specified in webpack
   config object or the loader query. Defaults to `handlebarsLoader`
 - Added `partialResolver` config option to override the default partial
