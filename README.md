@@ -2,6 +2,7 @@
 [![downloads](https://img.shields.io/npm/dm/handlebars-loader.svg?maxAge=2592000)](https://www.npmjs.com/package/handlebars-loader)
 [![Build Status](https://travis-ci.org/pcardune/handlebars-loader.svg?branch=master)](https://travis-ci.org/pcardune/handlebars-loader)
 [![Coverage Status](https://coveralls.io/repos/github/pcardune/handlebars-loader/badge.svg?branch=master)](https://coveralls.io/github/pcardune/handlebars-loader?branch=master)
+[![Reviewed by Hound](https://img.shields.io/badge/Reviewed_by-Hound-8E64B0.svg)](https://houndci.com)
 
 # handlebars-loader
 
@@ -55,7 +56,7 @@ The following query (or config) options are supported:
  - *helperDirs*: Defines additional directories to be searched for helpers. Allows helpers to be defined in a directory and used globally without relative paths. You must surround helpers in subdirectories with brackets (Handlerbar helper identifiers can't have forward slashes without this). See [example](https://github.com/altano/handlebars-loader/tree/master/examples/helperDirs)
  - *runtime*: Specify the path to the handlebars runtime library. Defaults to look under the local handlebars npm module, i.e. `handlebars/runtime`.
  - *extensions*: Searches for templates with alternate extensions. Defaults are .handlebars, .hbs, and '' (no extension).
- - *inlineRequires*: Defines a regex that identifies strings within helper/partial parameters that should be replaced by inline require statements.
+ - *inlineRequires*: Defines a regex that identifies strings within helper/partial parameters that should be replaced by inline require statements. **Note**: For this to work, you'll have to disable the `esModule` Option in the corresponding file-loader entry in your webpack config.
  - *rootRelative*: When automatically resolving partials and helpers, use an implied root path if none is present. Default = `./`. Setting this to be empty effectively turns off automatically resolving relative handlebars resources for items like `{{helper}}`. `{{./helper}}` will still resolve as expected.
  - *knownHelpers*: Array of helpers that are registered at runtime and should not explicitly be required by webpack. This helps with interoperability for libraries like Thorax [helpers](http://thoraxjs.org/api.html#template-helpers).
  - *exclude*: Defines a regex that will exclude paths from resolving. This can be used to prevent helpers from being resolved to modules in the `node_modules` directory.
